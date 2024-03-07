@@ -1,8 +1,15 @@
-import { NgModule } from '@angular/core';
+//app-routing.module.ts
+import { Component, NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { LoginComponent } from './login/login.component';
 import { SignupComponent } from './signup/signup.component';
-import { WelcomeComponent } from './welcome/welcome.component';
+
+import { AdminComponent } from './admin/admin.component';
+import { UserComponent } from './user/user.component';
+import { InternalwelcomeComponent } from './internaluser/internaluser.component';
+import { WelcomeComponent } from './externaluser/externaluser.component';
+
+
 
 const routes: Routes = [
   {
@@ -16,6 +23,16 @@ const routes: Routes = [
   },
   {
   path:'welcome', component:WelcomeComponent
+  },
+  {
+  path:'admin', component:AdminComponent
+  },
+  {
+  path:'create-user', component:UserComponent
+  },
+  {
+    path: 'internalwelcome',
+    component: InternalwelcomeComponent
   }
 ];
 

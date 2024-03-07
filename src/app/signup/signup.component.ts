@@ -1,3 +1,4 @@
+//singup.component.tt
 import { Component } from '@angular/core';
 import { Router } from '@angular/router';
 
@@ -13,17 +14,14 @@ export class SignupComponent {
     password: ''
   };
   onSignUp(){
+    this.signupObj.role = 'admin';
     this.signupUsers.push(this.signupObj);
     localStorage.setItem('signUpUsers',JSON.stringify(this.signupUsers));
+    this.signupObj = { email: '', password: '' };
   }
 
 
-  constructor(private router: Router) {}
-
-
-  navigateToSignup(): void {
-    this.router.navigate(['/signup']);
-  }
+  
 
 
 
