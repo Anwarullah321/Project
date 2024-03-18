@@ -106,6 +106,24 @@
   background-color: #45a049; /* Darker green on hover */
  }
  /* Vertically Center Content in Actions Column */
-
+ .button-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 20px;
+ }
+ 
+ .logout-button {
+  background-color: #007bff; /* Example background color */
+  color: white; /* Text color */
+  border: none;
+  padding: 5px 10px;
+  cursor: pointer;
+  border-radius: 5px;
+ }
+ 
+ .logout-button:hover {
+  background-color: #0056b3; /* Example hover color */
+ }
  
  

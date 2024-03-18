@@ -1,5 +1,6 @@
 // user.component.ts
 
+import { HttpClient } from '@angular/common/http';
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -17,45 +18,29 @@ export class UserComponent implements OnInit {
   });
 
   
-  constructor(private formBuilder: FormBuilder, private router: Router) {} 
+  constructor(private formBuilder: FormBuilder, private router: Router, private http: HttpClient) {} 
 
   ngOnInit() {
    
   }
-  createUser() {
-    console.log('Selected role before creating user:', this.userForm.value.role);
-    const userRole = this.userForm.value.role;
-    const userId = userRole === 'internal' || userRole === 'external' ? Date.now() : null;
+ // user.component.ts
 
-    let userEmail; // Variable to store the user's email
-
-    // If the user is internal, use the provided email
-    if (userRole === 'internal') {
-      userEmail = this.userForm.value.email;
-    } else {
-      // If the user is external, generate a placeholder email
-      userEmail = `external_user_${userId}@example.com`;
-    }
-
-    const userData = {
-      id: userId, // Only include 'id' if the role is 'internal' or 'external'
-      email: userEmail,
-      ...this.userForm.value
-    };
-    
-    console.log('User data after creating user:', userData);
-    // Save user data to local storage
-    if (userId) {
-      localStorage.setItem(`user_${userId}`, JSON.stringify(userData));
-    }
-    localStorage.setItem('userEmail', userData.email);
-    let signUpUsers = JSON.parse(localStorage.getItem('signUpUsers') || '[]');
-    signUpUsers.push(userData);
-    localStorage.setItem('signUpUsers', JSON.stringify(signUpUsers));
-    // Optionally, clear the form
-    this.userForm.reset();
-    this.router.navigate(['/admin']);
-  }
+createUser() {
+  const userData = this.userForm.value;
+  const apiUrl = 'http://localhost:8080/api/adminUser/create'; // Your API endpoint
+ 
+  this.http.post(apiUrl, userData).subscribe(
+     (response) => {
+       console.log('User created successfully:', response);
+       this.userForm.reset();
+       this.router.navigate(['/admin']);
+     },
+     (error) => {
+       console.error('Error creating user:', error);
+     }
+  );
+ }
+ 
   
   
 }

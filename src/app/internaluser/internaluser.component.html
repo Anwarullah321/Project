@@ -17,10 +17,15 @@
          {{ file.name }}
        </li>
   </ul>
-  <div style="display: flex; justify-content: center; margin-top: 20px;">
-    <button  (click)="onSubmitClick()" style="padding: 6px 12px; font-size: 14px; color: white; background-color: #007bff; border-radius: 5px; border: none; cursor: pointer; margin-right: 10px;">Submit File</button>
+  <!-- Wrap the Submit Button and the Filter Search Bar in a Container -->
+<div class="submit-filter-container" style="display: flex; justify-content: center; align-items: center; margin-top: 20px; margin-left: 100px;">
+  <!-- Submit File Button -->
+  <button (click)="onSubmitClick()" style="padding: 6px 12px; font-size: 14px; color: white; background-color: #007bff; border-radius: 5px; border: none; cursor: pointer; margin-right: 10px;">Submit File</button>
    
-  </div>
+  <!-- Filter Search Bar -->
+  <input type="text" [(ngModel)]="emailFilter" (input)="filterFilesByEmail()" placeholder="Filter by external user email" style="padding: 6px 12px; font-size: 14px; border-radius: 5px; border: 1px solid #ccc;">
+ </div>
+ 
  </div>
  
 
@@ -57,50 +62,73 @@
 <!-- Display submitted files -->
 <div class="file-list-container">
   <h2 class="section-title">{{ submittedFiles.length > 1 ? 'Submitted Files' : 'Submitted File' }}</h2>
-  <ul>
-     <li class="file-list-item" *ngFor="let file of submittedFiles"
-     class="file-list-item" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 90%;"
-     >
-       <div class="file-details">
-         <span class="file-name">{{ file.name }}</span>
-        
-         <div class="file-submitted-to">
-          
-          <ul class="submitted-to-list">
-            <li *ngFor="let email of file.submittedToEmails">{{ email }}</li>
-          </ul>
-        </div>
-       </div>
-      <!-- <button class="view-button" (click)="viewFile(file)">View</button> -->
-     </li>
-  </ul>
-  <button class="view-all-button"(click)="viewAllFiles()">View All Files</button>
-  <div class="view-all-files-container">
-    <!-- File Listing Item -->
-    <div *ngFor="let file of allFiles; let i = index" class="file-list-item">
-       <!-- File Details -->
-       <div class="file-details">
-         <!-- File Name -->
-         <span class="file-name">{{ file.name }}</span>
-         
-          <!-- In your component's template -->
-
-
-          
-            
-         
-        
-         <!-- File Type and Size -->
-        
-         <span class="file-status" [style.background-color]="getStatusColor(file.status)" style="padding: 1px 5px; border-radius: 8px; font-size: 14px; color: rgb(255, 255, 255); margin-left: 15px;">{{ file.status }}</span>
-         <li *ngFor="let email of file.submittedToEmails">{{ email }}</li>
-        </div>
-       <!-- Delete Button -->
-       <button class="delete-button hover-effect" (click)="deleteFile(file)">Delete</button>
-    </div>
-   </div>
-   
+  <table class="files-table">
+      <thead>
+        <tr>
+          <th>No</th>
+          <th>Name</th>
+          <th>Submitted To</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <ng-container *ngFor="let file of submittedFiles; let i = index">
+          <tr>
+            <td>{{ i + 1 }}</td>
+            <td>{{ file.name }}</td>
+            <td>
+              <ul class="submitted-to-list">
+                <li *ngFor="let email of file.submittedToEmails">{{ email }}</li>
+              </ul>
+            </td>
+            <td>
+              <!-- Actions can be added here, such as a view button -->
+              <button class="action-button">View</button>
+            </td>
+          </tr>
+        </ng-container>
+      </tbody>
+  </table>
+  <!-- View All Files Button -->
+  <button class="view-all-button" (click)="viewAllFiles()">View All Files</button>
+ 
+  <!-- Display all files with delete button -->
+  <div class="view-all-files-container" *ngIf="showAllFiles">
+     <h2 class="section-title">All Files</h2>
+     <table class="files-table">
+        <thead>
+          <tr>
+            <th>No</th>
+            <th>Name</th>
+            <th>Submitted To</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <ng-container *ngFor="let file of allFiles; let i = index">
+            <tr>
+              <td>{{ i + 1 }}</td>
+              <td>{{ file.name }}</td>
+              <td>
+                {{ file.submittedToEmails }}
+               </td>
+               
+              <td>{{ file.status }}</td>
+              <td>
+                <button class="delete-button hover-effect" (click)="deleteFile(file)">Delete</button>
+              </td>
+            </tr>
+          </ng-container>
+        </tbody>
+     </table>
+  </div>
  </div>
+ 
+
+ 
+   
+
  
 
 

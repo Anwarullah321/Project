@@ -15,6 +15,7 @@ import { InternalwelcomeComponent } from './internaluser/internaluser.component'
 import { MatDialogModule } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { WelcomeComponent } from './externaluser/externaluser.component';
+import { HttpClientModule } from '@angular/common/http';
 
 
 @NgModule({
@@ -35,6 +36,7 @@ import { WelcomeComponent } from './externaluser/externaluser.component';
     ReactiveFormsModule,
     MatDialogModule,
     MatIconModule, 
+    HttpClientModule,
   ],
   providers: [],
   bootstrap: [AppComponent]

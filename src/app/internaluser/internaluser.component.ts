@@ -1,5 +1,7 @@
 //internalwelcome.component.ts(internal user)
+import { HttpClient } from '@angular/common/http';
 import { ChangeDetectorRef, Component } from '@angular/core';
+import { Observable, map, tap } from 'rxjs';
 interface FileData {
   name: string;
   type: string;
@@ -13,6 +15,7 @@ interface FileData {
   status: string;
   email: string;
   submittedToEmails: string[];
+  publicId: string; 
 }
 @Component({
   selector: 'app-internaluser',
@@ -31,12 +34,47 @@ export class InternalwelcomeComponent {
     showModal: boolean = false;
     selectedExternalUsers: string[] = []; // Define selectedExternalUsers property
     externalUsers: { email: string }[] = []; // Define externalUsers property
+    emailFilter: string = '';
+    filteredFiles: FileData[] = [];
+    showAllFiles = false;
+    allFilesFetched = false; 
 
-    constructor(private cdr: ChangeDetectorRef) {
+    constructor(private cdr: ChangeDetectorRef,private http: HttpClient) {
       this.userId = localStorage.getItem('userId') || 'defaultUserId';
       console.log('User ID:', this.userId);
       
     }
+
+
+    
+    filterFilesByEmail() {
+      console.log('Filtering files by email:', this.emailFilter);
+     
+      // If emailFilter is empty or being cleared, reset the allFiles and submittedFiles to their original unfiltered state
+      if (!this.emailFilter) {
+         // Reset to the original unfiltered state
+         this.allFiles = this.allFiles.filter(file => file.submitted); // Assuming you want to keep only submitted files
+         this.submittedFiles = this.allFiles;
+         console.log('Email filter cleared. Displaying all files.');
+      } else {
+         // Filter allFiles based on the emailFilter
+         this.allFiles = this.allFiles.filter(file => {
+           return file.submitted && // Ensure files are submitted
+             file.submittedToEmails.some(email => email.toLowerCase().includes(this.emailFilter.toLowerCase()));
+         });
+     
+         // Update submittedFiles based on the filtered allFiles
+         this.submittedFiles = this.allFiles;
+     
+         console.log('Filtered submittedFiles:', this.submittedFiles);
+         console.log('Filtered allFiles:', this.allFiles);
+      }
+    }
+     
+    
+      
+     
+     
 
     getStatusColor(status: string): string {
       switch (status) {
@@ -55,6 +93,7 @@ export class InternalwelcomeComponent {
      
     onSubmitClick() {
       console.log('Submit button clicked');
+      console.log('External User Name:', this.externalUserName); 
       
       // Assuming the document name is the name of the first uploaded file
       if (this.uploadedFiles.length >  0) {
@@ -68,6 +107,14 @@ export class InternalwelcomeComponent {
       this.getExternalUsers(); 
       console.log(this.allFiles);
       //this.viewAllFiles();
+      this.fetchExternalUserEmails();
+      this.fetchAllFiles().subscribe(() => {
+        // After fetching all files, update the submittedFiles array
+        this.updateSubmittedFiles();
+        // Optionally, trigger change detection to ensure the view updates
+        this.cdr.detectChanges();
+     });
+     
     }
     getExternalUsers() {
       const signUpUsers = JSON.parse(localStorage.getItem('signUpUsers') || '[]');
@@ -82,6 +129,31 @@ export class InternalwelcomeComponent {
       // Reset other form fields as needed
      }
      
+// Add this method to your internalwelcome.component.ts
+fetchExternalUserEmails() {
+  this.http.get('http://localhost:8080/api/internalUser/getAllExternalUserEmails').subscribe(
+     (response: any) => {
+       // Check if the response is an array and contains objects with an 'email' property
+       
+       if (Array.isArray(response) && response.every(item => item.hasOwnProperty('email'))) {
+        
+         this.externalUsers = response.map((user: { email: string }) => ({ email: user.email }));
+         //this.externalUserName = this.externalUsers.map(user => user.email).join(', ');
+       } else {
+         console.log('Unexpected response structure.');
+       }
+     },
+     error => {
+       console.error('Error fetching external user emails:', error);
+     }
+  );
+ }
+ 
+ 
+ 
+ 
+
+
     onFileSelected(event: Event) {
       const target = event.target as HTMLInputElement;
       this.files = target.files;
@@ -95,84 +167,143 @@ export class InternalwelcomeComponent {
           submitted: true,
           userId: this.userId,
           status: 'New',
+          submittedToEmails: []
         }));
-        console.log('Uploaded files:', this.uploadedFiles); 
+        
+        console.log('Uploaded files:', this.uploadedFiles, ); 
         
       }
     }
   
-    submitFiles(documentName: string, externalUserName: string,) {
+    updateSubmittedFiles() {
+      // Filter allFiles to include only those files that are considered "submitted"
+      this.submittedFiles = this.allFiles.filter(file => file.submitted);
+      
+      console.log('Updated submittedFiles:', this.submittedFiles);
+      // Trigger change detection to update the view
+      this.cdr.detectChanges();
+      
+     }
+
+     fetchAllFiles(): Observable<any> {
+      return this.http.get('http://localhost:8080/api/internalUser/getAllFiles').pipe(
+         tap((response: any) => {
+           console.log('Response:', response);
+           // Check if the response contains a 'data' array
+           if (response.data && Array.isArray(response.data)) {
+             // Map the response to the FileData interface
+             this.allFiles = response.data.map((file: any) => ({
+               name: file.fileName,
+               type: 'application/pdf',
+               lastModified: new Date().getTime(),
+               size: 0,
+               data: file.pdfUrl,
+               submitted: true,
+               userId: this.userId,
+               documentName: file.fileName,
+               internalUserName: '',
+               status: 'New',
+               email: '',
+               submittedToEmails: file.submittedToEmails || [],
+               publicId: file.publicId 
+             }));
+             console.log('All Files:', this.allFiles);
+             // Trigger change detection to update the view
+            this.updateSubmittedFiles();
+             this.cdr.detectChanges();
+           } else {
+             console.log('Unexpected response structure.');
+             // Handle the unexpected response structure here
+             // For example, you might want to display an error message to the user
+           }
+         },
+           error => {
+             console.error('Error fetching all files:', error);
+           })
+       );
+     }
+
+     fetchInternalUserEmail(): Observable<string> {
+      // Since the backend returns a string directly, we expect a string response
+      return this.http.get<string>('http://localhost:8080/api/internalUser/getEmail');
+     }
+     
+
+
+    submitFiles(documentName: string, externalUserName: string) {
+      console.log('external user are: ', externalUserName);
       const userEmail = this.getUserEmail(this.userId);
       console.log("useremail and userid: ", userEmail, this.userId);
-      if (!externalUserName) {
+
+      if (!this.uploadedFiles || this.uploadedFiles.length === 0) {
+        alert('Please select a document before submitting.');
+        return;
+      }
+      // Check if externalUserName is provided and not just whitespace
+      if (!externalUserName || externalUserName.trim().length === 0) {
          alert('Please select email before submitting the file.');
-         return; // Exit the method if the internal user name is not provided
+         return; // Exit the method if the external user name is not provided or is just whitespace
       }
      
       // Assuming externalUserName is a string of emails separated by commas
       const externalUserEmails = externalUserName.split(',').map(email => email.trim());
      
-      // Retrieve the existing list of emails from localStorage
-      let storedEmails = JSON.parse(localStorage.getItem('externalUserEmails') || '[]');
-     
-      // Add new emails to the existing list
-      storedEmails = [...storedEmails, ...externalUserEmails];
-     
-      // Remove duplicates (optional, if you want to ensure each email is unique)
-      storedEmails = [...new Set(storedEmails)];
-     
-      // Store the updated list back in localStorage
-      localStorage.setItem('externalUserEmails', JSON.stringify(storedEmails));
-     
-      console.log('External User Name:', externalUserName);
-      const externalUserNames = externalUserName.split(',').map(username => username.trim());
-     
+      this.fetchInternalUserEmail().subscribe(
+        (response: any) => {
+           console.log("Fetched user email response: ", response);
+           const userEmail = response.email; // Extract the email address from the response
+           console.log("Fetched user email: ", userEmail);
+
       // Filter out any files that have already been submitted to the same external user
       const newFiles = this.uploadedFiles.filter(file => {
          // Check if the file has already been submitted to any of the selected external users
-         const alreadySubmittedToExternalUser = externalUserNames.some(externalUserEmail => {
-           return this.submittedFiles.some(f => f.name === file.name && f.submittedToEmails.includes(externalUserEmail));
+         const alreadySubmittedToExternalUser = externalUserEmails.some(externalUserEmail => {
+           return this.submittedFiles.some(f => f.name === file.name && f.userId === file.userId && f.submittedToEmails.includes(externalUserEmail));
          });
          return !alreadySubmittedToExternalUser;
       });
      
       if (newFiles.length > 0) {
-         const userFilesKey = `userFiles_${this.userId}`;
-     
-         let existingUserFiles = JSON.parse(localStorage.getItem(userFilesKey) || '[]');
-         console.log("Existing user files: ", existingUserFiles);
-         const externalUserEmails = externalUserName.split(',').map(username => username.trim());
-     
-         newFiles.forEach((file: FileData) => {
+         const formData = new FormData();
+         newFiles.forEach((file: FileData, index) => {
            file.documentName = documentName;
            file.internalUserName = userEmail;
            file.email = userEmail;
            file.submittedToEmails = externalUserEmails;
            console.log("submittedtoemails is: ", file.submittedToEmails);
+           // Append each file to the FormData object with the field name 'file'
+           formData.append('name', documentName);
+           formData.append('submittedToEmails', JSON.stringify(externalUserEmails));
+           formData.append('internalUserEmail', userEmail);
+           formData.append('file', file.data, file.name);
+           
+           
          });
      
-         existingUserFiles = existingUserFiles.concat(newFiles);
-         localStorage.setItem(userFilesKey, JSON.stringify(existingUserFiles));
-         console.log('existing user files are: ', existingUserFiles);
-         const storedFiles = localStorage.getItem(userFilesKey);
-         if (storedFiles) {
-           console.log('Files stored in localStorage:', JSON.parse(storedFiles));
-         } else {
-           console.error('Failed to store files in localStorage.');
-         }
-         // Update the submittedFiles array to include the new files
-         this.submittedFiles.push(...newFiles);
+         // Send the FormData object to the server
+         this.http.post('http://localhost:8080/api/internalUser/uploadFile', formData).subscribe(
+           (response: any) => {
+             console.log('Files uploaded successfully:', response);
+             // Update the submittedFiles array to include the new files
+             this.submittedFiles.push(...newFiles);
+             // Clear the uploadedFiles array
+             this.uploadedFiles = [];
+             // Indicate that the files have been submitted
+             this.isSubmitted = true;
+           },
+           error => {
+             console.error('Error uploading files:', error);
+           }
+         );
       }
-      this.submittedFiles = this.uploadedFiles;
-      // Clear the uploadedFiles array
-      this.uploadedFiles = [];
+     }, error => {
+      console.error('Error fetching internal user email:', error);
+    }
+ );
+}
      
-      // Save the updated submittedFiles array to localStorage
-      this.saveSubmittedFiles();
      
-      // Indicate that the files have been submitted
-      this.isSubmitted = true;
-     }
+   
      
      
      
@@ -195,81 +326,16 @@ export class InternalwelcomeComponent {
       }
     }
     
-    
-    
-
-    viewSubmittedFiles() {
-      const userFilesKey = `userFiles_${this.userId}`;
-      console.log('view submitted file is ', userFilesKey);
-      const storedFiles = localStorage.getItem(userFilesKey);
-      console.log('view stored file: ', storedFiles);
-      if (storedFiles) {
-        try {
-          const allFiles: FileData[] = JSON.parse(storedFiles);
-          this.submittedFiles = allFiles.filter((file: FileData) => file.userId === this.userId);
-          this.submittedFiles.forEach((file: FileData) => {
-            const url = URL.createObjectURL(file.data);
-            window.open(url, '_blank');
-          });
-        } catch (error) {
-          console.error('Error loading submitted files:', error);
-          this.submittedFiles = [];
-        }
-      }
-    }
-  
 
 
-    viewAllFiles() {
-      const userFilesKey = `userFiles_${this.userId}`;
-      console.log("user found", userFilesKey);
-      const storedFiles = localStorage.getItem(userFilesKey);
-      console.log("user stored", storedFiles);
-      if (storedFiles) {
-         try {
-           const filesFromStorage = JSON.parse(storedFiles);
-           // Filter out duplicate files based on their name and user ID
-           const allFiles: FileData[] = JSON.parse(storedFiles);
-           // Display all files, including duplicates submitted to different users
-           this.allFiles = allFiles;
-           console.log('Retrieved files from localStorage:', this.allFiles);
-         } catch (error) {
-           console.error('Error loading all files:', error);
-         }
-      } else {
-         console.log('No files found in localStorage.');
-      }
-     }
-     
     
-    private getUniqueFiles(files: any[]): any[] {
-      const uniqueFilesMap = new Map<string, any>();
-      // Add files to a map using their name and user ID as a key
-      files.forEach(file => {
-        const key = `${file.name}-${file.userId}`;
-        if (!uniqueFilesMap.has(key)) {
-          uniqueFilesMap.set(key, file);
-        }
-      });
-      // Convert the map back to an array of unique files
-      return Array.from(uniqueFilesMap.values());
-    }
+      viewAllFiles() {
+        this.showAllFiles = !this.showAllFiles;
+        console.log('Show all files:', this.showAllFiles);
+        this.cdr.detectChanges();
+       }
+       
     
-  viewFile(file: any) {
- if (file.data instanceof Blob) {
-    // Create a URL for the Blob object
-    const url = URL.createObjectURL(file.data);
-    // Open the URL in a new window or tab
-    window.open(url, '_blank');
-    // Optionally, revoke the URL to free up memory
-    URL.revokeObjectURL(url);
- } else if (typeof file.data === 'string') {
-    // If file.data is a URL, directly open it
-    window.open(file.data, '_blank');
- } else {
-    console.error('Unsupported file data format:', file.data);
- }
-}
 
   
   private loadSubmittedFiles() {
@@ -282,11 +348,15 @@ export class InternalwelcomeComponent {
     if (storedFiles) {
         try {
           const allFiles: FileData[] = JSON.parse(storedFiles);
+          console.log("Loaded allFiles:", allFiles); // Ensure this logs the expected data
           const userSpecificFiles = allFiles.filter(file => file.userId === this.userId);
           console.log(this.allFiles);
           this.submittedFiles = [...userSpecificFiles]; //.filter((file: FileData) => file.userId === this.userId);
+          this.allFiles = allFiles; 
           console.log('Filtered submittedFiles length:', this.submittedFiles.length);
       console.log('Filtered submittedFiles:', this.submittedFiles);
+          
+         
           this.cdr.detectChanges();  
         } catch (error) {
             console.error('Error loading submitted files:', error);
@@ -296,25 +366,38 @@ export class InternalwelcomeComponent {
     }
   }
 
-  private saveSubmittedFiles() {
-    const userFilesKey = `userFiles_${this.userId}`;
-    try {
-        localStorage.setItem('submittedFiles', JSON.stringify(this.submittedFiles));
-      } catch (error) {
-        console.error('Error saving submitted files:', error);
-      }
-  }
-  deleteFile(file: any) {
-    const index = this.allFiles.indexOf(file);
-    if (index !== -1) {
-      this.allFiles.splice(index, 1);
-      const userFilesKey = `userFiles_${this.userId}`;
-      let existingUserFiles = JSON.parse(localStorage.getItem(userFilesKey) || '[]');
-      existingUserFiles.splice(index, 1);
-      localStorage.setItem(userFilesKey, JSON.stringify(existingUserFiles));
-    
-  }
-  }
+
+  deleteFile(file: FileData) {
+    // Assuming file.publicId is the property that holds the public ID of the file
+    const publicId = file.publicId;
+    if (!publicId) {
+       console.error('Public ID not found for the file. Cannot delete.');
+       return;
+    }
+   
+    // Construct the URL for the delete request
+    const deleteUrl = `http://localhost:8080/api/internalUser/delete/${publicId}`;
+   
+    // Send the DELETE request to the server
+    this.http.delete(deleteUrl).subscribe(
+       (response: any) => {
+         console.log('File deleted successfully:', response);
+         // Remove the file from the allFiles array
+         const index = this.allFiles.indexOf(file);
+         if (index !== -1) {
+           this.allFiles.splice(index, 1);
+         }
+         // Optionally, update the local storage to reflect the deletion
+         
+         // Trigger change detection to update the view
+         this.cdr.detectChanges();
+       },
+       error => {
+         console.error('Error deleting file:', error);
+       }
+    );
+   }
+   
 
   handleAction(event: Event, file: FileData) {
     const action = (event.target as HTMLSelectElement).value;

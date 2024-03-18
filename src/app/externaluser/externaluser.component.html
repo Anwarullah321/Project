@@ -1,4 +1,19 @@
 
+
+<div class="button-container">
+
+<input type="text" [(ngModel)]="searchEmail" (input)="searchFiles()" placeholder="Search by internal user email" 
+style="padding: 6px 12px; font-size: 14px; border-radius: 5px; border: 1px solid #ccc; margin-left: 100px;"
+/>
+<button class="logout-button" (click)="logout()"
+  style="margin-right: 100px;"
+  >Logout</button>
+</div>
+<!-- Display filtered files -->
+<div *ngFor="let file of filteredFiles">
+ <!-- Display file details here -->
+</div>
+
 <table class="files-table">
   <thead>
     <tr>
@@ -10,7 +25,7 @@
     </tr>
   </thead>
   <tbody>
-    <ng-container *ngFor="let file of files; let i = index">
+    <ng-container *ngFor="let file of filteredFiles; let i = index">
       <tr>
         <td>{{ i +   1 }}</td>
         <td>{{ file.name }}</td>
@@ -31,4 +46,5 @@
     </ng-container>
   </tbody>
 </table>
+
 

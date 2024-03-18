@@ -113,4 +113,35 @@ h2 {
     background-color: #45a049;
    }
    
+
+
+
+
+.button-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 20px;
+   }
+   
+   .logout-button {
+    background-color: #007bff; /* Example background color */
+    color: white; /* Text color */
+    border: none;
+    padding: 5px 10px;
+    cursor: pointer;
+    border-radius: 5px;
+   }
+   
+   .logout-button:hover {
+    background-color: #0056b3; /* Example hover color */
+   }
+  
+
+.user-role {
+    font-size: 16px; /* Adjust font size */
+    font-weight: bold; /* Make the text bold */
+    color: #007bff; /* Change color to blue for emphasis */
+    margin-bottom: 10px; /* Add some space below the role */
+   }
    

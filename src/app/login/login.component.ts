@@ -1,4 +1,5 @@
 //login.component.ts
+import { HttpClient } from '@angular/common/http';
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 
@@ -15,55 +16,47 @@ export class LoginComponent implements OnInit {
   };
   signupUsers: any[] = []; // Initialize as an empty array
 
-  constructor(private router: Router) {}
+  constructor(private router: Router, private http: HttpClient) {}
 
   ngOnInit(): void {
-    const localData = localStorage.getItem('signUpUsers');
-    if (localData) {
-      try {
-        this.signupUsers = JSON.parse(localData);
-      } catch (error) {
-        console.error('Error parsing local storage data:', error);
-        // Clear or reset `signupUsers` appropriately
-       // this.signupUsers = [];
-      }
-    }
+   
   }
 
   onLogin() {
-    const isUserExist = this.signupUsers.find((user) =>
-      user.email === this.loginObj.email && user.password === this.loginObj.password
-    );
-  
-    if (isUserExist) {
-      console.log('User found:', isUserExist);
-      // Check if the user has a role of 'internal' or 'external'
-      if (isUserExist.role === 'internal' || isUserExist.role === 'external') {
-        // Use the id from the found user object as the userId
-        const userId = isUserExist.id;
-        if (userId) {
-          // Store the userId in localStorage
-          localStorage.setItem('userId', userId.toString());
-          // Navigate to the appropriate page based on the user's role
-          localStorage.setItem('userEmail', isUserExist.email);
-          if (isUserExist.role === 'internal') {
-            
-            this.router.navigate(['/internalwelcome']);
-          } else if (isUserExist.role === 'external') {
-            localStorage.setItem('externaluser', isUserExist.email);
-            this.router.navigate(['/welcome']);
+    console.log('Sending login request with:', this.loginObj);
+    this.http.post('http://localhost:8080/api/login', this.loginObj).subscribe(
+      (response: any) => {
+        console.log('Received response:', response);
+        if (response.status === 'success') {
+          // Assuming the response includes a user role and an ID
+          const userId = response.userID;
+          const userRole = response.role; // Assuming the backend sends back the role
+
+          if (userRole === 'internal' || userRole === 'external') {
+            console.log('Navigating to admin page');
+            localStorage.setItem('userId', userId);
+            localStorage.setItem('userEmail', this.loginObj.email);
+            if (userRole === 'internal') {
+              console.log('Navigating to internal welcome page');
+              this.router.navigate(['/internalwelcome']);
+            } else if (userRole === 'external') {
+              console.log('Navigating to welcome page');
+              localStorage.setItem('externaluser', this.loginObj.email);
+              this.router.navigate(['/welcome']);
+            }
+          } else if (userRole === 'admin') {
+            this.router.navigate(['/admin']);
           }
         } else {
-          alert('User ID not found for the logged-in user.');
+          alert('Invalid credentials or user not found.');
         }
-      } else {
-        // If the user is an admin, navigate to the admin page without setting a userId
-        this.router.navigate(['/admin']);
+      },
+      (error) => {
+        console.error('Error during login:', error);
+        alert('Error during login. Please try again.');
       }
-    } else {
-      alert('Invalid credentials or user not found.');
-    }
-  }
+    );
+ }
   
   
   
